@@ -181,8 +181,8 @@
                         transition={{ duration: 1 }}
                         className="relative"
                     >
-                        <LogoAITU className="w-24 h-24 text-acid animate-spin" style={{ animationDuration: '3s' }} />
-                        <div className="absolute inset-0 blur-xl bg-acid/20 rounded-full animate-pulse"></div>
+                        <LogoAITU className="w-32 h-32 text-acid" />
+                        <div className="absolute inset-0 blur-2xl bg-acid/10 rounded-full animate-pulse"></div>
                     </motion.div>
                     <motion.div 
                         initial={{ width: 0 }}
@@ -208,15 +208,27 @@
             return <motion.div className="fixed top-0 left-0 right-0 h-1 bg-acid origin-left z-[1000]" style={{ scaleX }} />;
         };
 
-        // --- LOGO AITU ---
+        // --- LOGO AITU (REDESIGNED TO MATCH OFFICIAL GEOMETRY) ---
         const LogoAITU = ({ className, style }) => (
             <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} style={style}>
-                <circle cx="50" cy="50" r="12" fill="currentColor" />
-                <path d="M50 25 C 63.8 25 75 36.2 75 50" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeDasharray="15 10" />
-                <path d="M50 75 C 36.2 75 25 63.8 25 50" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeDasharray="15 10" />
-                <path d="M25 50 C 25 36.2 36.2 25 50 25" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeDasharray="10 15" opacity="0.5" />
-                <path d="M75 50 C 75 63.8 63.8 75 50 75" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeDasharray="10 15" opacity="0.5" />
-                <path d="M50 10 V 15 M 50 85 V 90 M 10 50 H 15 M 85 50 H 90" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                {/* Center Circle */}
+                <circle cx="50" cy="50" r="14" fill="currentColor" />
+                
+                {/* TOP LEFT QUADRANT */}
+                {/* Outer Arc - Dark (Solid) */}
+                <path d="M50 10 A 40 40 0 0 0 10 50" stroke="currentColor" strokeWidth="8" strokeLinecap="round" /> 
+                {/* Middle Arc - Blue (Simulated with Opacity) */}
+                <path d="M50 22 A 28 28 0 0 0 22 50" stroke="currentColor" strokeWidth="8" strokeLinecap="round" opacity="0.5" />
+                {/* Inner Arc - Blue (Simulated with Opacity) */}
+                <path d="M50 34 A 16 16 0 0 0 34 50" stroke="currentColor" strokeWidth="8" strokeLinecap="round" opacity="0.5" />
+
+                {/* BOTTOM LEFT QUADRANT */}
+                {/* Outer Arc - Blue (Simulated with Opacity) */}
+                <path d="M10 50 A 40 40 0 0 0 50 90" stroke="currentColor" strokeWidth="8" strokeLinecap="round" opacity="0.5" />
+                {/* Middle Arc - Dark (Solid) */}
+                <path d="M22 50 A 28 28 0 0 0 50 78" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
+                {/* Inner Arc - Dark (Solid) */}
+                <path d="M34 50 A 16 16 0 0 0 50 66" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
             </svg>
         );
 
@@ -292,7 +304,8 @@
         const Navbar = () => (
             <nav className="fixed top-0 w-full z-40 px-6 md:px-12 py-6 flex justify-between items-center mix-blend-difference bg-black/20 backdrop-blur-md border-b border-white/5">
                 <div className="flex items-center gap-3 group cursor-pointer hover-trigger">
-                    <LogoAITU className="w-10 h-10 text-white group-hover:text-acid transition-colors animate-[spin_10s_linear_infinite]" />
+                    {/* Removed spin animation for more professional look */}
+                    <LogoAITU className="w-12 h-12 text-white group-hover:text-acid transition-colors" />
                     <div className="flex flex-col">
                         <span className="text-lg font-display font-bold leading-none">AITU</span>
                         <span className="text-[8px] uppercase tracking-widest opacity-50">Chemistry</span>
@@ -434,7 +447,7 @@
                                 <p className="font-mono text-gray-500 text-sm group-hover:text-white transition-colors">{p.year}</p>
                             </div>
                             <div className="relative z-10 flex-1 flex flex-col justify-end overflow-hidden">
-                                <p className="text-xs font-sans uppercase tracking-widest text-gray-600 mb-2 group-hover:text-acid transition-colors shrink-0">История открытия</p>
+                                <p className="text-xs font-sans uppercase tracking-widest text-gray-500 mb-2 group-hover:text-acid transition-colors shrink-0">История открытия</p>
                                 <div className="max-h-[300px] overflow-y-auto scrollable-content translate-y-4 opacity-50 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 ease-out">
                                     <p className="text-sm text-gray-400 leading-relaxed pr-2 pb-2">{p.discovery}</p>
                                 </div>
