@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="ru" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AITU: HALOGENS ULTIMATE</title>
+    <meta name="description" content="Интерактивный образовательный курс по химии галогенов.">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Manrope:wght@300;400;600;800&family=Syncopate:wght@400;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+
+    <!-- Libs -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['Syncopate', 'sans-serif'],
+                        serif: ['Cinzel', 'serif'],
+                        sans: ['Manrope', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        'acid': '#D4FF00',
+                        'charcoal': '#050505',
+                        'glass': 'rgba(255, 255, 255, 0.03)',
+                        'dark-surface': '#0A0A0A',
+                    },
+                    backgroundImage: {
+                        'noise': "url('https://grainy-gradients.vercel.app/noise.svg')",
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #050505; color: #Eaeaea; cursor: none; overflow-x: hidden; }
+        ::selection { background-color: #D4FF00; color: black; }
+        
+        /* Скроллбар */
+        ::-webkit-scrollbar { width: 6px; } 
+        ::-webkit-scrollbar-track { background: #050505; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #D4FF00; }
+        
+        .scrollable-content::-webkit-scrollbar { width: 4px; }
+        .scrollable-content::-webkit-scrollbar-track { background: transparent; }
+        .scrollable-content::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+        .scrollable-content::-webkit-scrollbar-thumb:hover { background: #D4FF00; }
+        
+        .noise-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.07'/%3E%3C/svg%3E");
+            pointer-events: none; z-index: 50;
+        }
+
+        .glitch-wrapper { position: relative; display: inline-block; }
+        .glitch-wrapper::before, .glitch-wrapper::after {
+            content: attr(data-text); position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #050505;
+        }
+        .glitch-wrapper::before {
+            left: 2px; text-shadow: -1px 0 #ff00c1; clip: rect(44px, 450px, 56px, 0);
+            animation: glitch-anim 5s infinite linear alternate-reverse;
+        }
+        .glitch-wrapper::after {
+            left: -2px; text-shadow: -1px 0 #00fff9; clip: rect(44px, 450px, 56px, 0);
+            animation: glitch-anim2 5s infinite linear alternate-reverse;
+        }
+        @keyframes glitch-anim { 0% { clip: rect(30px, 9999px, 10px, 0); } 100% { clip: rect(10px, 9999px, 100px, 0); } }
+        @keyframes glitch-anim2 { 0% { clip: rect(60px, 9999px, 30px, 0); } 100% { clip: rect(40px, 9999px, 10px, 0); } }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+        const { motion, AnimatePresence, useScroll, useSpring } = window.Motion;
+
+        // --- UTIL COMPONENTS ---
+
+        // Background Particle System for Hero
+        const MolecularBackground = () => {
+            const canvasRef = useRef(null);
+
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                let animationFrameId;
+                
+                const resize = () => {
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                };
+                window.addEventListener('resize', resize);
+                resize();
+
+                const particles = Array.from({ length: 50 }, () => ({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 0.5,
+                    size: Math.random() * 2 + 1
+                }));
+
+                const draw = () => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = '#D4FF00';
+                    ctx.strokeStyle = 'rgba(212, 255, 0, 0.15)';
+
+                    particles.forEach((p, i) => {
+                        p.x += p.vx;
+                        p.y += p.vy;
+
+                        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // Connections
+                        for (let j = i + 1; j < particles.length; j++) {
+                            const p2 = particles[j];
+                            const dx = p.x - p2.x;
+                            const dy = p.y - p2.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+
+                            if (dist < 150) {
+                                ctx.beginPath();
+                                ctx.lineWidth = 1 - dist / 150;
+                                ctx.moveTo(p.x, p.y);
+                                ctx.lineTo(p2.x, p2.y);
+                                ctx.stroke();
+                            }
+                        }
+                    });
+                    animationFrameId = requestAnimationFrame(draw);
+                };
+                draw();
+
+                return () => {
+                    window.removeEventListener('resize', resize);
+                    cancelAnimationFrame(animationFrameId);
+                };
+            }, []);
+
+            return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-30 pointer-events-none z-0" />;
+        };
+
+        const Preloader = ({ onComplete }) => {
+            return (
+                <motion.div 
+                    className="fixed inset-0 z-[9999] bg-charcoal flex flex-col items-center justify-center"
+                    initial={{ opacity: 1 }}
+                    animate={{ opacity: 0 }}
+                    transition={{ duration: 0.8, delay: 2.5, ease: "easeInOut" }}
+                    onAnimationComplete={onComplete}
+                >
+                    <motion.div 
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ duration: 1 }}
+                        className="relative"
+                    >
+                        <LogoAITU className="w-24 h-24 text-acid animate-spin" style={{ animationDuration: '3s' }} />
+                        <div className="absolute inset-0 blur-xl bg-acid/20 rounded-full animate-pulse"></div>
+                    </motion.div>
+                    <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: 200 }}
+                        transition={{ duration: 2, ease: "easeInOut" }}
+                        className="h-1 bg-acid mt-8 rounded-full"
+                    />
+                    <motion.p 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 0.5 }}
+                        transition={{ delay: 0.5 }}
+                        className="mt-4 font-mono text-xs text-acid tracking-[0.5em] uppercase"
+                    >
+                        Initializing Core
+                    </motion.p>
+                </motion.div>
+            );
+        };
+
+        const ScrollProgress = () => {
+            const { scrollYProgress } = useScroll();
+            const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
+            return <motion.div className="fixed top-0 left-0 right-0 h-1 bg-acid origin-left z-[1000]" style={{ scaleX }} />;
+        };
+
+        // --- LOGO AITU ---
+        const LogoAITU = ({ className, style }) => (
+            <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} style={style}>
+                <circle cx="50" cy="50" r="12" fill="currentColor" />
+                <path d="M50 25 C 63.8 25 75 36.2 75 50" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeDasharray="15 10" />
+                <path d="M50 75 C 36.2 75 25 63.8 25 50" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeDasharray="15 10" />
+                <path d="M25 50 C 25 36.2 36.2 25 50 25" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeDasharray="10 15" opacity="0.5" />
+                <path d="M75 50 C 75 63.8 63.8 75 50 75" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeDasharray="10 15" opacity="0.5" />
+                <path d="M50 10 V 15 M 50 85 V 90 M 10 50 H 15 M 85 50 H 90" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+            </svg>
+        );
+
+        const CustomCursor = () => {
+            const [pos, setPos] = useState({ x: 0, y: 0 });
+            const [hover, setHover] = useState(false);
+            useEffect(() => {
+                const move = (e) => setPos({ x: e.clientX, y: e.clientY });
+                const over = (e) => setHover(!!e.target.closest('a, button, .hover-trigger, .cursor-pointer'));
+                window.addEventListener('mousemove', move);
+                window.addEventListener('mouseover', over);
+                return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseover', over); }
+            }, []);
+            return (
+                <motion.div className="fixed top-0 left-0 w-4 h-4 bg-acid rounded-full pointer-events-none z-[9000] mix-blend-difference"
+                    animate={{ x: pos.x - 8, y: pos.y - 8, scale: hover ? 4 : 1, opacity: hover ? 0.8 : 1 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                />
+            );
+        };
+
+        const Marquee = ({ text, speed = 20 }) => (
+            <div className="overflow-hidden whitespace-nowrap border-y border-white/10 py-4 bg-black select-none relative z-20">
+                <motion.div className="inline-block text-sm md:text-lg font-display uppercase tracking-[0.5em] text-gray-500"
+                    animate={{ x: ["0%", "-50%"] }} transition={{ repeat: Infinity, ease: "linear", duration: speed }}>
+                    {text} • {text} • {text} • {text} •
+                </motion.div>
+            </div>
+        );
+
+        // --- DATA ---
+        const ELEMENTS = [
+            { id: 1, sym: 'F', name: 'Фтор', mass: '18.998', type: 'Газ', temp: '-219°C', desc: 'Самый активный неметалл во Вселенной. Окисляет воду. Светло-желтый газ.', details: { role: 'Зубная эмаль', valency: '-1' } },
+            { id: 2, sym: 'Cl', name: 'Хлор', mass: '35.453', type: 'Газ', temp: '-101°C', desc: 'Желто-зеленый ядовитый газ. Тяжелее воздуха. Дезинфекция.', details: { role: 'Желудочный сок', valency: '-1..+7' } },
+            { id: 3, sym: 'Br', name: 'Бром', mass: '79.904', type: 'Жидкость', temp: '-7.2°C', desc: 'Красно-бурая летучая жидкость. Успокоительное.', details: { role: 'Нервная система', valency: '-1..+7' } },
+            { id: 4, sym: 'I', name: 'Йод', mass: '126.90', type: 'Твердое', temp: '+113°C', desc: 'Фиолетовые кристаллы. Сублимация (возгонка).', details: { role: 'Щитовидная железа', valency: '-1..+7' } },
+             { id: 5, sym: 'At', name: 'Астат', mass: '[210]', type: 'Твердое', temp: '+302°C', desc: 'Радиоактивный. Самый редкий галоген.', details: { role: 'Радиоактивен', valency: '-1..+7' } },
+        ];
+
+        const PIONEERS = [
+            { name: 'Анри Муассан', year: '1886', discovery: 'Французский химик, который совершил невозможное. В течение 70 лет химики погибали или теряли здоровье, пытаясь выделить фтор. Муассан охладил смесь HF и KHF2 до -23°C (по тем временам экстремальный холод) и использовал электролизер из платины и иридия. За этот подвиг он получил Нобелевскую премию.' },
+            { name: 'Карл Шееле', year: '1774', discovery: 'Скромный шведский аптекарь, открывший больше элементов, чем кто-либо другой. Получил хлор, нагревая минерал пиролюзит с соляной кислотой. Он назвал газ «дефлогистированным воздухом» и даже не подозревал, что открыл новый элемент, думая, что это соединение кислорода.' },
+            { name: 'Антуан Балар', year: '1826', discovery: 'Молодой французский химик, изучавший флору соляных болот Монпелье. Обработав золу водорослей хлорной водой, он увидел появление красно-бурой жидкости с удушливым запахом. Он назвал её «мурид», но академия переименовала её в Бром (от греч. «зловонный»).' },
+            { name: 'Бернар Куртуа', year: '1811', discovery: 'Французский химик-технолог. Во время наполеоновских войн производил селитру для пороха. Однажды, добавив слишком много кислоты к золе водорослей в медном котле, он увидел облака великолепного фиолетового пара, который оседал в виде блестящих темных кристаллов. Так был открыт Йод.' },
+        ];
+
+        const APPLICATIONS = [
+            { id: 'med', title: 'МЕДИЦИНА', sub: 'АНТИСЕПТИКИ', text: 'Галогены спасают жизни. 5% спиртовой раствор йода — самый известный антисептик, который есть в каждой аптечке. Но это лишь вершина айсберга. Фторированные соединения используются для создания искусственной крови (перфторан) и современных ингаляционных анестетиков (фторотан, севофлуран), которые сделали хирургию безопасной. Бромиды долгое время были главными успокоительными средствами.' },
+            { id: 'ind', title: 'ИНДУСТРИЯ', sub: 'ПОЛИМЕРЫ', text: 'Современный мир построен на галогенах. Хлор — основа поливинилхлорида (ПВХ), из которого делают трубы, оконные рамы, изоляцию проводов и искусственную кожу. Фтор рождает Тефлон (ПТФЭ) — материал с уникальной химической стойкостью, который не горит, не растворяется кислотами и обладает рекордной скользкостью. Без фторполимеров невозможна современная авиация и космонавтика.' },
+            { id: 'h2o', title: 'ВОДА', sub: 'ОЧИСТКА', text: 'Хлорирование воды — величайшее достижение общественного здравоохранения 20 века. Добавление ничтожных количеств хлора в водопроводную воду остановило эпидемии холеры, тифа и дизентерии. Хлор окисляет клеточные оболочки бактерий, мгновенно уничтожая их. Сегодня разрабатываются альтернативы (озон, ультрафиолет), но хлор остается стандартом надежности для миллиардов людей.' },
+            { id: 'light', title: 'СВЕТ', sub: 'ГАЛОГЕНКИ', text: 'Почему фары дорогих машин светят так ярко? В колбу лампы накаливания добавляют пары йода или брома. Это запускает "галогенный цикл": испарившийся вольфрам не оседает на стекле (из-за чего обычные лампы чернеют), а соединяется с галогеном и возвращается обратно на раскаленную нить. Это позволяет поднять температуру спирали, увеличить яркость и продлить срок службы лампы в разы.' },
+            { id: 'bio', title: 'ЗДОРОВЬЕ', sub: 'ОРГАНИЗМ', text: 'Мы состоим из галогенов. Соляная кислота (HCl) в желудке создает агрессивную среду для переваривания пищи и убивает микробов. Фтор встраивается в кристаллическую решетку зубной эмали, образуя фторапатит — самый твердый биологический материал, защищающий зубы от кариеса. Йод — ключевой компонент гормонов щитовидной железы (тироксина), которые управляют скоростью нашего обмена веществ и интеллектом.' },
+            { id: 'chem', title: 'ХИМИЯ', sub: 'СИНТЕЗ', text: 'Галогены — "руки" химика-органика. Введение атома галогена в молекулу позволяет затем заменить его на любую другую функциональную группу. Это основной метод создания лекарств, пестицидов, красителей и сложных материалов. Хладоны (фреоны) на основе фтора и хлора долгое время были единственными безопасными газами для холодильников и кондиционеров, пока не были заменены на озонобезопасные аналоги.' },
+        ];
+
+        const QUIZ = [
+            { q: "Конфигурация внешнего уровня?", a: ["ns²np⁵", "ns²np⁴", "ns²np⁶"], correct: 0 },
+            { q: "Какой галоген — жидкость?", a: ["Фтор", "Бром", "Йод"], correct: 1 },
+            { q: "Реакция с крахмалом дает цвет:", a: ["Красный", "Синий", "Белый"], correct: 1 },
+            { q: "Кто открыл Хлор?", a: ["Менделеев", "Шееле", "Муассан"], correct: 1 },
+            { q: "Самый активный неметалл?", a: ["Кислород", "Хлор", "Фтор"], correct: 2 },
+        ];
+
+        // --- ANIMATIONS ---
+        const fadeInUp = {
+            hidden: { opacity: 0, y: 60 },
+            visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] } }
+        };
+        const stagger = { visible: { transition: { staggerChildren: 0.1 } } };
+
+        // --- COMPONENTS ---
+
+        const Navbar = () => (
+            <nav className="fixed top-0 w-full z-40 px-6 md:px-12 py-6 flex justify-between items-center mix-blend-difference bg-black/20 backdrop-blur-md border-b border-white/5">
+                <div className="flex items-center gap-3 group cursor-pointer hover-trigger">
+                    <LogoAITU className="w-10 h-10 text-white group-hover:text-acid transition-colors animate-[spin_10s_linear_infinite]" />
+                    <div className="flex flex-col">
+                        <span className="text-lg font-display font-bold leading-none">AITU</span>
+                        <span className="text-[8px] uppercase tracking-widest opacity-50">Chemistry</span>
+                    </div>
+                </div>
+                <div className="hidden md:flex gap-8 text-xs font-sans uppercase tracking-widest font-bold">
+                    <a href="#theory" className="hover:text-acid transition-colors hover-trigger">Теория</a>
+                    <a href="#elements" className="hover:text-acid transition-colors hover-trigger">Элементы</a>
+                    <a href="#videos" className="hover:text-acid transition-colors hover-trigger">Видеоразбор</a>
+                    <a href="#quiz" className="hover:text-acid transition-colors hover-trigger">Тест</a>
+                </div>
+                <a href="#elements" className="px-6 py-2 bg-white text-black font-display text-xs font-bold uppercase hover:bg-acid transition-colors hover-trigger">Урок</a>
+            </nav>
+        );
+
+        const Hero = () => (
+            <header className="min-h-screen flex flex-col justify-center px-6 md:px-20 relative overflow-hidden pt-20">
+                <MolecularBackground />
+                <div className="absolute top-0 right-0 w-2/3 h-full opacity-20 pointer-events-none">
+                     <div className="w-full h-full bg-[conic-gradient(at_top_right,_var(--tw-gradient-stops))] from-acid via-black to-black blur-[120px] animate-[pulse_8s_infinite]"></div>
+                </div>
+                <motion.div initial="hidden" animate="visible" variants={stagger} className="max-w-[90vw] relative z-10">
+                    <motion.div variants={fadeInUp} className="mb-8 flex items-center gap-4">
+                        <span className="px-3 py-1 border border-acid/30 text-[10px] uppercase tracking-[0.3em] font-sans text-acid bg-acid/5 backdrop-blur-sm rounded-full">Group 17</span>
+                        <span className="px-3 py-1 bg-white text-black text-[10px] uppercase tracking-[0.3em] font-sans font-bold rounded-full">AITU Course</span>
+                    </motion.div>
+                    <motion.h1 variants={fadeInUp} className="text-[13vw] leading-[0.8] font-serif mix-blend-difference mb-8">
+                        <span className="block italic font-light text-gray-500 text-[0.4em] mb-[-0.1em] font-mono tracking-tighter">Born to</span>
+                        <span className="glitch-wrapper text-white" data-text="ОКИСЛЯТЬ">ОКИСЛЯТЬ</span>
+                    </motion.h1>
+                    <motion.p variants={fadeInUp} className="max-w-xl font-sans text-gray-300 text-xl leading-relaxed border-l-2 border-acid pl-8 backdrop-blur-sm bg-black/20 py-4 rounded-r-lg">
+                        Погружение в химии самых реактивных элементов Вселенной. <br/>Полный интерактивный курс.
+                    </motion.p>
+                </motion.div>
+                
+                <motion.div 
+                    className="absolute bottom-10 right-10 md:right-20 text-right z-10 hidden md:block"
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}
+                >
+                     <div className="text-xs font-mono text-acid mb-2">SCROLL TO EXPLORE</div>
+                     <div className="w-px h-16 bg-acid/50 ml-auto animate-float origin-bottom"></div>
+                </motion.div>
+            </header>
+        );
+
+        const Theory = () => (
+            <section id="theory" className="py-32 px-6 md:px-20 grid grid-cols-1 md:grid-cols-2 gap-16 items-center bg-dark-surface relative z-20 border-t border-white/5">
+                <motion.div initial="hidden" whileInView="visible" variants={fadeInUp} viewport={{ once: true, margin: "-100px" }}>
+                    <h2 className="text-5xl font-serif mb-8">Природа <span className="text-acid italic">Атома</span></h2>
+                    <p className="font-sans text-gray-400 text-lg leading-relaxed mb-8">
+                        Галогены имеют 7 электронов на внешнем уровне. Им не хватает всего одного электрона до завершения оболочки.
+                        Это делает их <strong className="text-white">самыми сильными окислителями</strong>.
+                    </p>
+                    <div className="grid grid-cols-2 gap-4 font-mono text-sm">
+                        <div className="p-6 border border-white/10 bg-black/50 hover:border-acid/50 transition-colors duration-300 group">
+                            <div className="text-acid mb-2 text-xs uppercase tracking-wider">Конфигурация</div>
+                            <div className="text-2xl group-hover:scale-110 transition-transform origin-left">ns²np⁵</div>
+                        </div>
+                        <div className="p-6 border border-white/10 bg-black/50 hover:border-acid/50 transition-colors duration-300 group">
+                            <div className="text-acid mb-2 text-xs uppercase tracking-wider">Валентность</div>
+                            <div className="text-2xl group-hover:scale-110 transition-transform origin-left">I, III, V, VII</div>
+                        </div>
+                    </div>
+                </motion.div>
+                <div className="relative flex justify-center">
+                    <div className="w-64 h-64 rounded-full border border-dashed border-white/20 flex items-center justify-center animate-[spin_20s_linear_infinite]">
+                        <div className="absolute w-4 h-4 bg-acid rounded-full shadow-[0_0_30px_#D4FF00] animate-pulse"></div>
+                        {[0, 72, 144, 216, 288].map(deg => (
+                            <div key={deg} className="absolute top-0 left-1/2 w-2 h-2 bg-white/80 rounded-full" style={{ transform: `rotate(${deg}deg) translateY(-128px)` }}></div>
+                        ))}
+                    </div>
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-sm font-mono tracking-widest bg-black px-4 py-2 border border-acid/30 rounded text-acid">7e-</div>
+                </div>
+            </section>
+        );
+
+        const ExpandableRow = ({ el }) => {
+            const [isOpen, setIsOpen] = useState(false);
+            return (
+                <motion.div className="group border-b border-white/10 relative overflow-hidden hover-trigger cursor-pointer bg-black"
+                    onClick={() => setIsOpen(!isOpen)} onMouseEnter={() => setIsOpen(true)} onMouseLeave={() => setIsOpen(false)}>
+                    <motion.div className="absolute inset-0 bg-white z-0" initial={{ scaleY: 0 }} animate={{ scaleY: isOpen ? 1 : 0 }} transition={{ duration: 0.4, ease: [0.33, 1, 0.68, 1] }} style={{ originY: 1 }} />
+                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center p-8 transition-colors duration-300 group-hover:text-black">
+                        <div className="flex items-center gap-8">
+                            <div className="w-16 h-16 border border-current flex items-center justify-center text-2xl font-serif rounded-full transition-transform duration-300 group-hover:rotate-12">{el.sym}</div>
+                            <div><h3 className="text-4xl font-serif italic">{el.name}</h3><p className="text-xs uppercase tracking-widest mt-1 opacity-60 font-sans font-bold">{el.type}</p></div>
+                        </div>
+                        <div className="flex items-center gap-12 mt-6 md:mt-0">
+                            <div className="text-right hidden md:block"><div className="text-xs uppercase tracking-widest opacity-50">Плавление</div><div className="text-xl font-mono">{el.temp}</div></div>
+                            <button className="border border-current px-6 py-2 text-xs font-display uppercase tracking-widest group-hover:bg-black group-hover:text-white transition-colors">
+                                {isOpen ? 'Свернуть' : 'Инфо'}
+                            </button>
+                        </div>
+                    </div>
+                    <AnimatePresence>
+                        {isOpen && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="relative z-10 px-8 pb-8 group-hover:text-black">
+                                <div className="pt-6 border-t border-current grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <p className="font-sans text-lg leading-relaxed font-medium">{el.desc}</p>
+                                    <ul className="font-mono text-xs uppercase tracking-widest space-y-3 opacity-80">
+                                        <li className="flex justify-between border-b border-current/20 pb-2"><span>Масса</span> <span>{el.mass}</span></li>
+                                        <li className="flex justify-between border-b border-current/20 pb-2"><span>Био-роль</span> <span>{el.details.role}</span></li>
+                                        <li className="flex justify-between border-b border-current/20 pb-2"><span>Валентность</span> <span>{el.details.valency}</span></li>
+                                    </ul>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </motion.div>
+            );
+        };
+
+        const ElementsList = () => (
+            <section id="elements" className="py-32 bg-black px-6 md:px-20 relative z-20">
+                <div className="mb-20 max-w-4xl">
+                    <h2 className="text-6xl md:text-8xl font-serif text-white mb-6">Элементы</h2>
+                    <p className="font-sans text-gray-500 text-lg">Интерактивная таблица подгруппы галогенов. <br/>Кликните по строке элемента для раскрытия детальной информации.</p>
+                </div>
+                <div className="border-t border-white/20">
+                    {ELEMENTS.map(el => (
+                        <ExpandableRow key={el.id} el={el} />
+                    ))}
+                </div>
+            </section>
+        );
+
+        const Pioneers = () => (
+            <section id="pioneers" className="py-32 px-6 md:px-20 bg-charcoal relative z-20">
+                <motion.h2 initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} className="text-5xl md:text-7xl font-display mb-32 text-center tracking-tighter">
+                    ПЕРВООТКРЫВАТЕЛИ
+                </motion.h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-white/10 border border-white/10">
+                    {PIONEERS.map((p, i) => (
+                        <motion.div key={i} initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
+                            className="group relative bg-charcoal hover:bg-dark-surface transition-all duration-500 p-8 h-[500px] flex flex-col justify-between hover-trigger cursor-pointer overflow-hidden">
+                            <div>
+                                <div className="w-12 h-1 bg-acid mb-8 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
+                                <h3 className="text-3xl font-serif italic text-white mb-2 group-hover:text-acid transition-colors">{p.name}</h3>
+                                <p className="font-mono text-gray-500 text-sm group-hover:text-white transition-colors">{p.year}</p>
+                            </div>
+                            <div className="relative z-10 flex-1 flex flex-col justify-end overflow-hidden">
+                                <p className="text-xs font-sans uppercase tracking-widest text-gray-600 mb-2 group-hover:text-acid transition-colors shrink-0">История открытия</p>
+                                <div className="max-h-[300px] overflow-y-auto scrollable-content translate-y-4 opacity-50 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 ease-out">
+                                    <p className="text-sm text-gray-400 leading-relaxed pr-2 pb-2">{p.discovery}</p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            </section>
+        );
+
+        // VIDEO SECTION WITH STYLIZED LINKS (SAFE SOLUTION)
+        const VideoSection = () => (
+            <section id="videos" className="py-32 px-6 md:px-20 bg-dark-surface z-20 relative">
+                <div className="flex flex-col md:flex-row justify-between items-end mb-16 border-b border-white/10 pb-8">
+                    <h2 className="text-4xl font-serif">ВИДЕОРАЗБОР</h2>
+                    <p className="font-mono text-xs text-acid uppercase tracking-widest mt-4 md:mt-0">Смотреть на YouTube</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {[
+                        { title: "Натрий + Хлор", id: "ji_25I_q4LQ", desc: "Яркая реакция образования соли" },
+                        { title: "Фтор - самый активный", id: "vtWp45Eewtw", desc: "Профессор Поляков о Фторе" },
+                        { title: "Возгонка Йода", id: "jX9pskbKSw0", desc: "Красивый переход из твердого в газ" }
+                    ].map((vid, i) => (
+                        <a key={i} href={`https://www.youtube.com/watch?v=${vid.id}`} target="_blank" rel="noopener noreferrer" className="group block cursor-pointer relative hover-trigger">
+                            <div className="aspect-video bg-black border border-white/10 relative flex items-center justify-center mb-6 overflow-hidden rounded-lg transform group-hover:scale-[1.02] transition-transform duration-500">
+                                <img 
+                                    src={`https://img.youtube.com/vi/${vid.id}/hqdefault.jpg`} 
+                                    alt={vid.title}
+                                    className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-500 grayscale group-hover:grayscale-0"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-80"></div>
+                                
+                                {/* Play Button UI */}
+                                <div className="w-16 h-16 rounded-full border border-white/50 flex items-center justify-center group-hover:scale-110 transition-transform bg-black/50 backdrop-blur-md z-10 group-hover:bg-acid group-hover:border-acid group-hover:text-black shadow-2xl">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 ml-1">
+                                        <path d="M8 5v14l11-7z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <h3 className="text-xl font-display text-white group-hover:text-acid transition-colors leading-none">{vid.title}</h3>
+                                    <p className="text-xs font-mono text-gray-500 mt-2">{vid.desc}</p>
+                                </div>
+                            </div>
+                        </a>
+                    ))}
+                </div>
+            </section>
+        );
+
+        const AppGrid = () => {
+            const [selectedApp, setSelectedApp] = useState(null);
+            return (
+                <section id="apps" className="py-32 bg-black relative z-20">
+                    <div className="px-6 md:px-20 mb-16">
+                        <h2 className="text-4xl font-serif">Сферы Применения</h2>
+                        <p className="text-sm font-mono text-gray-500 uppercase tracking-widest mt-2">Кликните для раскрытия</p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border-t border-white/10">
+                        {APPLICATIONS.map((app) => (
+                            <motion.div key={app.id} layoutId={app.id} onClick={() => setSelectedApp(app)}
+                                className="aspect-square border-r border-b border-white/10 relative group hover-trigger cursor-pointer flex flex-col items-center justify-center bg-charcoal hover:bg-[#0f0f0f] transition-colors p-6 text-center">
+                                <div className="absolute top-4 left-4 w-2 h-2 bg-acid rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                <motion.h3 className="text-3xl font-display font-bold opacity-40 group-hover:opacity-100 group-hover:text-acid transition-all duration-500">{app.title}</motion.h3>
+                                <motion.p className="mt-4 text-xs font-mono uppercase tracking-widest text-gray-500 group-hover:text-white transition-colors">{app.sub}</motion.p>
+                            </motion.div>
+                        ))}
+                    </div>
+                    <AnimatePresence>
+                        {selectedApp && (
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-20 bg-black/90 backdrop-blur-xl cursor-pointer"
+                                onClick={() => setSelectedApp(null)}>
+                                <motion.div layoutId={selectedApp.id} className="bg-charcoal border border-white/20 w-full max-w-4xl h-full md:h-auto md:max-h-[80vh] md:aspect-video p-8 md:p-16 relative overflow-y-auto cursor-default shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                                    <button onClick={() => setSelectedApp(null)} className="absolute top-8 right-8 text-gray-500 hover:text-acid font-mono text-xl transition-colors hover-trigger">CLOSE [ESC]</button>
+                                    <div className="flex flex-col h-full justify-center">
+                                        <span className="text-acid font-mono text-sm uppercase tracking-[0.5em] mb-4">{selectedApp.sub}</span>
+                                        <h2 className="text-4xl md:text-7xl font-display font-bold mb-12 leading-none text-white">{selectedApp.title}</h2>
+                                        <div className="flex flex-col md:flex-row gap-12">
+                                            <div className="w-12 h-1 bg-acid shrink-0 mt-4 hidden md:block"></div>
+                                            <p className="text-lg md:text-xl font-sans font-light text-gray-300 leading-relaxed max-w-2xl">{selectedApp.text}</p>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </section>
+            );
+        };
+
+        const Quiz = () => {
+            const [current, setCurrent] = useState(0);
+            const [score, setScore] = useState(0);
+            const [finished, setFinished] = useState(false);
+            const [selectedAnswer, setSelectedAnswer] = useState(null);
+            const [isCorrect, setIsCorrect] = useState(null);
+
+            const handleAnswer = (idx) => {
+                if (selectedAnswer !== null) return; // Prevent double clicks
+
+                setSelectedAnswer(idx);
+                const correct = idx === QUIZ[current].correct;
+                setIsCorrect(correct);
+
+                if (correct) setScore(prev => prev + 1);
+
+                // Wait 1 second before next question
+                setTimeout(() => {
+                    setSelectedAnswer(null);
+                    setIsCorrect(null);
+                    if (current < QUIZ.length - 1) {
+                        setCurrent(prev => prev + 1);
+                    } else {
+                        setFinished(true);
+                    }
+                }, 1000);
+            };
+
+            const restart = () => {
+                setFinished(false);
+                setCurrent(0);
+                setScore(0);
+                setSelectedAnswer(null);
+            }
+
+            return (
+                <section id="quiz" className="py-32 px-6 md:px-20 bg-charcoal border-t border-white/10 relative z-20">
+                    <div className="max-w-3xl mx-auto text-center">
+                        <h2 className="text-5xl font-display mb-4">ЭКЗАМЕН</h2>
+                        <p className="text-gray-500 mb-12 font-mono text-sm">ПРОВЕРКА ЗНАНИЙ</p>
+                        {!finished ? (
+                            <motion.div 
+                                key={current}
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                className="border border-white/10 p-8 md:p-12 bg-dark-surface text-left relative shadow-2xl"
+                            >
+                                <div className="flex justify-between items-center mb-8">
+                                    <div className="text-xs font-mono text-acid tracking-widest">ВОПРОС {current + 1} / {QUIZ.length}</div>
+                                    <div className="h-1 bg-white/10 w-32 rounded-full overflow-hidden">
+                                        <div className="h-full bg-acid transition-all duration-300" style={{ width: `${((current) / QUIZ.length) * 100}%` }}></div>
+                                    </div>
+                                </div>
+                                
+                                <h3 className="text-2xl md:text-3xl font-serif mb-10 leading-tight min-h-[3em]">{QUIZ[current].q}</h3>
+                                
+                                <div className="space-y-3">
+                                    {QUIZ[current].a.map((ans, i) => {
+                                        let bgClass = "border-white/10 hover:bg-white/5 hover:border-white/30";
+                                        if (selectedAnswer !== null) {
+                                            if (i === QUIZ[current].correct) bgClass = "bg-acid text-black border-acid"; // Show correct
+                                            else if (i === selectedAnswer) bgClass = "bg-red-500 text-white border-red-500"; // Show wrong
+                                            else bgClass = "border-white/5 opacity-30"; // Dim others
+                                        }
+
+                                        return (
+                                            <button 
+                                                key={i} 
+                                                onClick={() => handleAnswer(i)} 
+                                                disabled={selectedAnswer !== null}
+                                                className={`w-full text-left p-5 border transition-all font-mono text-sm uppercase tracking-wider flex justify-between items-center group hover-trigger ${bgClass}`}
+                                            >
+                                                <span>{ans}</span>
+                                                {selectedAnswer === i && (
+                                                    <span>{i === QUIZ[current].correct ? "✓" : "✕"}</span>
+                                                )}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </motion.div>
+                        ) : (
+                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="border border-acid p-12 bg-acid/5 backdrop-blur-md">
+                                <h3 className="text-4xl font-serif mb-4 text-white">Результат</h3>
+                                <div className="text-8xl font-display font-bold text-acid mb-8 tracking-tighter">{score} / {QUIZ.length}</div>
+                                <p className="mb-8 text-gray-400 font-sans">
+                                    {score === QUIZ.length ? "Идеальный результат! Вы мастер галогенов." : "Хорошая попытка. Попробуйте еще раз для закрепления."}
+                                </p>
+                                <button onClick={restart} className="px-8 py-4 bg-acid text-black font-display font-bold uppercase tracking-widest hover:bg-white transition-colors hover-trigger">
+                                    Пройти заново
+                                </button>
+                            </motion.div>
+                        )}
+                    </div>
+                </section>
+            );
+        };
+
+        const App = () => {
+            const [loading, setLoading] = useState(true);
+
+            return (
+                <>
+                    <AnimatePresence>
+                        {loading && <Preloader onComplete={() => setLoading(false)} />}
+                    </AnimatePresence>
+
+                    {!loading && (
+                        <div className="bg-charcoal min-h-screen text-white selection:bg-acid selection:text-black">
+                            <ScrollProgress />
+                            <div className="noise-layer"></div>
+                            <CustomCursor />
+                            <Navbar />
+                            <Hero />
+                            <Marquee text="ФТОР • ХЛОР • БРОМ • ЙОД • АСТАТ •" />
+                            <Theory />
+                            <ElementsList />
+                            <VideoSection />
+                            <Pioneers />
+                            <AppGrid />
+                            <Quiz />
+                            <footer className="py-24 px-6 md:px-20 bg-black relative overflow-hidden border-t border-white/10 z-20">
+                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-end relative z-10">
+                                    <div>
+                                        <div className="mb-6 flex items-center gap-3">
+                                             <LogoAITU className="w-16 h-16 text-acid" />
+                                             <div className="flex flex-col">
+                                                <span className="text-2xl font-display font-bold">AITU</span>
+                                                <span className="text-xs tracking-[0.5em] opacity-50">EXPO 2025</span>
+                                             </div>
+                                        </div>
+                                        <h2 className="text-4xl font-display font-bold leading-none text-white mb-4">CHEMISTRY</h2>
+                                    </div>
+                                    <div className="flex flex-col md:items-end gap-4 text-sm font-sans text-gray-500">
+                                        <span>Кафедра Химии</span>
+                                        <span className="mt-8 opacity-30">© 2025 AITU</span>
+                                    </div>
+                                 </div>
+                                 <div className="absolute -bottom-10 left-0 w-full text-center pointer-events-none select-none">
+                                     <span className="text-[20vw] font-display font-bold text-white opacity-[0.03]">AITU</span>
+                                 </div>
+                            </footer>
+                        </div>
+                    )}
+                </>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
